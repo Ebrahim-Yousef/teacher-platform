@@ -1,26 +1,194 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans:
+    "Cairo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-light: rgba(99, 102, 241, 0.1);
+  --color-primary-dark: #3730a3;
+  --color-secondary: #10b981;
+  --color-secondary-hover: #059669;
+  --color-secondary-light: #ecfdf5;
+  --color-secondary-dark: #047857;
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-light: #fffbeb;
+  --color-warning-dark: #b45309;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* إخفاء زر إظهار كلمة المرور الافتراضي في المتصفحات */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+button {
+  cursor: pointer;
+}
+
+/* تخصيص شريط التمرير (Scrollbar) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* تنسيقات حقل إدخال رقم الهاتف (react-phone-input-2) */
+.phone-container {
+  width: 100% !important;
+  direction: ltr;
+}
+.phone-input {
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid #1e293b !important;
+  font-size: 0.875rem !important;
+  padding-left: 42px !important;
+  padding-right: 12px !important;
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  color: #f8fafc !important;
+  transition: all 0.2s ease-in-out !important;
+}
+.phone-input:hover {
+  border-color: #6366f1 !important;
+}
+.phone-input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+  outline: none !important;
+}
+.react-tel-input .flag-dropdown {
+  left: 0 !important;
+  right: auto !important;
+  border: none !important;
+  background: transparent !important;
+}
+.react-tel-input .selected-flag {
+  background-color: transparent !important;
+  width: 42px !important;
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+.react-tel-input .form-control {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* كلاسات الأنيميشن والحركات */
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
+@keyframes modal {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-fade {
+  animation: fade 200ms ease-out;
+}
+.animate-modal {
+  animation: modal 200ms ease-out;
+}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* react-day-picker — Modern Dark Theme */
+.rdp-root {
+  --rdp-accent-color: #6366f1;
+  --rdp-accent-background-color: rgba(99, 102, 241, 0.2);
+  --rdp-day-height: 2.25rem;
+  --rdp-day-width: 2.25rem;
+  --rdp-day_button-height: 2.1rem;
+  --rdp-day_button-width: 2.1rem;
+  --rdp-day_button-border-radius: 0.65rem;
+  --rdp-selected-border: 2px solid #6366f1;
+  --rdp-today-color: #818cf8;
+  --rdp-outside-opacity: 0.35;
+  --rdp-nav_button-height: 2rem;
+  --rdp-nav_button-width: 2rem;
+  --rdp-nav-height: 2.25rem;
+  font-family: inherit;
+  margin: 0;
+}
+.rdp-root .rdp-months {
+  justify-content: center;
+}
+.rdp-root .rdp-month_caption {
+  font-weight: 700;
+  color: #f8fafc;
+  font-size: 0.9rem;
+}
+.rdp-root .rdp-weekday {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  opacity: 1;
+}
+.rdp-root .rdp-day_button {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  border: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.rdp-root .rdp-day_button:hover:not([disabled]):not(.rdp-selected) {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+.rdp-root .rdp-selected .rdp-day_button {
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-weight: 700;
+}
+.rdp-root .rdp-today:not(.rdp-selected) .rdp-day_button {
+  color: #818cf8;
+  box-shadow: inset 0 0 0 1.5px #6366f1;
+}
+.rdp-root .rdp-disabled .rdp-day_button {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.rdp-root .rdp-button_previous,
+.rdp-root .rdp-button_next {
+  border-radius: 0.65rem;
+  border: 1px solid #1e293b;
+  background: #0f172a;
+  color: #94a3b8;
+}
+.rdp-root .rdp-button_previous:hover,
+.rdp-root .rdp-button_next:hover {
+  background: #1e293b;
+  border-color: #6366f1;
+  color: #ffffff;
 }

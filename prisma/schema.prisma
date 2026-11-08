@@ -1,0 +1,390 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  TEACHER
+  ASSISTANT
+  STUDENT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  UNPAID
+  EXPIRED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  username  String?  @unique
+  password  String
+  phone     String?
+  role      Role     @default(TEACHER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacherId  String?
+  teacher    User?   @relation("TeacherAssistants", fields: [teacherId], references: [id], onDelete: SetNull)
+  assistants User[]  @relation("TeacherAssistants")
+
+  subscription Subscription?
+  students     StudentProfile[] @relation("TeacherStudents")
+  student      StudentProfile?  @relation("UserStudentProfile")
+
+  subjects        Subject[]           @relation("TeacherOwnedSubjects")
+  groups          Group[]             @relation("TeacherOwnedGroups")
+  sessions        AttendanceSession[] @relation("TeacherOwnedSessions")
+  assessments     Assessment[]        @relation("TeacherOwnedAssessments")
+  monthlyFees     MonthlyFee[]        @relation("TeacherMonthlyFees")
+  payments        Payment[]           @relation("TeacherPayments")
+  teacherSettings TeacherSettings?
+  notifications   Notification[]
+
+  @@index([teacherId])
+  @@index([role])
+  @@map("users")
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  status    SubscriptionStatus @default(ACTIVE)
+  expiresAt DateTime?
+  notes     String?
+  userId    String             @unique
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+model StudentProfile {
+  id           String   @id @default(uuid())
+  name         String
+  studentPhone String
+  parentPhone  String
+  stage        String   // الإبتدائية, الإعدادية, الثانوية
+  grade        String   // الصف الأول, الثاني...
+  
+  userId       String   @unique
+  user         User     @relation("UserStudentProfile", fields: [userId], references: [id], onDelete: Cascade)
+  
+  teacherId    String?
+  teacher      User?    @relation("TeacherStudents", fields: [teacherId], references: [id], onDelete: SetNull)
+  
+  groupMemberships   GroupMember[]
+  attendanceRecords  AttendanceRecord[]
+  submissions        AssessmentSubmission[]
+  assessmentScores   AssessmentScore[]
+  monthlyFees        MonthlyFee[]
+  payments           Payment[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([teacherId])
+  @@map("students")
+}
+
+model Subject {
+  id        String          @id @default(uuid())
+  name      String
+  code      String?
+  isActive  Boolean         @default(true)
+  teacherId String
+  teacher   User            @relation("TeacherOwnedSubjects", fields: [teacherId], references: [id], onDelete: Cascade)
+  branches  SubjectBranch[]
+  groups    Group[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([teacherId])
+  @@map("subjects")
+}
+
+model SubjectBranch {
+  id        String              @id @default(uuid())
+  name      String
+  code      String?
+  subjectId String
+  subject   Subject             @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  sessions  AttendanceSession[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([subjectId])
+  @@map("subject_branches")
+}
+
+model Group {
+  id                String              @id @default(uuid())
+  name              String
+  stage             String
+  grade             String
+  defaultMonthlyFee Float               @default(0)
+  isActive          Boolean             @default(true)
+  subjectId         String?
+  subject           Subject?            @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacherId         String
+  teacher           User                @relation("TeacherOwnedGroups", fields: [teacherId], references: [id], onDelete: Cascade)
+  members           GroupMember[]
+  scheduleSlots     GroupScheduleSlot[]
+  sessions          AttendanceSession[]
+  assessments       Assessment[]
+  monthlyFees       MonthlyFee[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([teacherId])
+  @@index([subjectId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id                 String         @id @default(uuid())
+  groupId            String
+  group              Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  studentId          String
+  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  monthlyFeeOverride Float?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@unique([groupId, studentId])
+  @@index([groupId])
+  @@index([studentId])
+  @@map("group_members")
+}
+
+model GroupScheduleSlot {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  dayOfWeek Int      // 0 = الأحد .. 6 = السبت
+  startTime String   // "HH:mm"
+  endTime   String   // "HH:mm"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId])
+  @@map("group_schedule_slots")
+}
+
+model AttendanceSession {
+  id              String             @id @default(uuid())
+  groupId         String
+  group           Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacherId       String
+  teacher         User               @relation("TeacherOwnedSessions", fields: [teacherId], references: [id], onDelete: Cascade)
+  subjectBranchId String?
+  subjectBranch   SubjectBranch?     @relation(fields: [subjectBranchId], references: [id], onDelete: SetNull)
+  title           String
+  date            String             // "YYYY-MM-DD"
+  startTime       String             // "HH:mm"
+  endTime         String             // "HH:mm"
+  notes           String?
+  records         AttendanceRecord[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([groupId])
+  @@index([teacherId])
+  @@index([date])
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status    String            @default("PRESENT") // PRESENT, ABSENT, LATE
+  note      String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+  @@map("attendance_records")
+}
+
+model Assessment {
+  id            String                 @id @default(uuid())
+  groupId       String
+  group         Group                  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacherId     String
+  teacher       User                   @relation("TeacherOwnedAssessments", fields: [teacherId], references: [id], onDelete: Cascade)
+  title         String
+  type          String                 @default("QUIZ") // QUIZ, EXAM, ASSIGNMENT, OTHER
+  deliveryMode  String                 @default("MANUAL") // MANUAL, ONLINE
+  date          String                 // "YYYY-MM-DD"
+  maxScore      Float                  @default(100)
+  notes         String?
+  instructions  String?
+  availableFrom String?
+  availableTo   String?
+  isPublished   Boolean                @default(false)
+  questions     AssessmentQuestion[]
+  submissions   AssessmentSubmission[]
+  scores        AssessmentScore[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  @@index([groupId])
+  @@index([teacherId])
+  @@map("assessments")
+}
+
+model AssessmentQuestion {
+  id            String             @id @default(uuid())
+  assessmentId  String
+  assessment    Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  type          String             @default("MCQ") // MCQ, TRUE_FALSE, SHORT_TEXT
+  prompt        String
+  points        Float              @default(1)
+  options       String?            // JSON string
+  correctAnswer String?
+  order         Int                @default(0)
+  answers       AssessmentAnswer[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([assessmentId])
+  @@map("assessment_questions")
+}
+
+model AssessmentSubmission {
+  id           String             @id @default(uuid())
+  assessmentId String
+  assessment   Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  autoScore    Float              @default(0)
+  totalScore   Float              @default(0)
+  status       String             @default("submitted") // submitted, graded
+  submittedAt  DateTime           @default(now())
+  answers      AssessmentAnswer[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([assessmentId, studentId])
+  @@index([assessmentId])
+  @@index([studentId])
+  @@map("assessment_submissions")
+}
+
+model AssessmentAnswer {
+  id               String               @id @default(uuid())
+  submissionId     String
+  submission       AssessmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         AssessmentQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  booleanAnswer    Boolean?
+  selectedOptionId String?
+  textAnswer       String?
+  pointsAwarded    Float?
+  isCorrect        Boolean?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([submissionId])
+  @@index([questionId])
+  @@map("assessment_answers")
+}
+
+model AssessmentScore {
+  id           String         @id @default(uuid())
+  assessmentId String
+  assessment   Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  score        Float
+  note         String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([assessmentId, studentId])
+  @@index([assessmentId])
+  @@index([studentId])
+  @@map("assessment_scores")
+}
+
+model MonthlyFee {
+  id                  String         @id @default(uuid())
+  teacherId           String
+  teacher             User           @relation("TeacherMonthlyFees", fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId           String
+  student             StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  groupId             String?
+  group               Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  month               String         // "YYYY-MM"
+  amountDue           Float          @default(0)
+  amountPaid          Float          @default(0)
+  status              String         @default("UNPAID") // UNPAID, PARTIAL, PAID
+  billingWindowStatus String         @default("UNPAID") // UNPAID, WITHIN_WINDOW, AFTER_WINDOW, OVERDUE
+  payments            Payment[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([studentId, month, teacherId])
+  @@index([teacherId])
+  @@index([studentId])
+  @@index([month])
+  @@map("monthly_fees")
+}
+
+model Payment {
+  id           String         @id @default(uuid())
+  monthlyFeeId String?
+  monthlyFee   MonthlyFee?    @relation(fields: [monthlyFeeId], references: [id], onDelete: SetNull)
+  teacherId    String
+  teacher      User           @relation("TeacherPayments", fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount       Float
+  date         DateTime       @default(now())
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([teacherId])
+  @@index([studentId])
+  @@index([monthlyFeeId])
+  @@map("payments")
+}
+
+model TeacherSettings {
+  id               String   @id @default(uuid())
+  teacherId        String   @unique
+  teacher          User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  whatsappTemplate String?
+  activeSubjectIds String?  // JSON string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("teacher_settings")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String?
+  targetUrl String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}
